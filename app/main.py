@@ -3,18 +3,20 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from app.core.database import init_db
 from app.models import knowledge
+from app.tools import order_tools
+from app.tools.order_tools import seed_mock_orders
 from app.api.chat import router as chat_router
 from app.api.voice import router as voice_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    print("✅ PostgreSQL 连接成功，pgvector 扩展与 knowledge_chunks 表已就绪！")
+    await seed_mock_orders()
+    print("✅ PostgreSQL 连接成功，知识库表、订单表与售后工单表已全部就绪！")
     yield
 
-app = FastAPI(title="跨境电商智能客服系统", lifespan=lifespan)
+app = FastAPI(title="跨境电商全能智能客服与售后决策中枢", lifespan=lifespan)
 
-# 注册文本流式聊天路由 + 全双工实时语音 WebSocket 路由
 app.include_router(chat_router)
 app.include_router(voice_router)
 

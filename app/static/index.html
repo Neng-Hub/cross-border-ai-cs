@@ -2,92 +2,121 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>跨境电商多语种智能客服中枢 (文本 + 全双工语音)</title>
+    <title>跨境电商全能智能客服中枢 (RAG + 售后Agent + 全双工语音)</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; gap: 20px; }
-        .panel { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; height: 86vh; }
-        .chat-panel { width: 580px; }
-        .voice-panel { width: 420px; background: #0f172a; color: #f8fafc; }
-        .header { background: #1e293b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header h2 { margin: 0; font-size: 16px; }
-        .chat-box { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 82%; padding: 10px 14px; border-radius: 10px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 14px; display: flex; justify-content: center; gap: 14px; }
+        .panel { background: white; border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; height: 92vh; }
+        .chat-panel { width: 460px; }
+        .voice-panel { width: 360px; background: #0f172a; color: #f8fafc; }
+        .admin-panel { width: 380px; background: #ffffff; }
+        .header { background: #1e293b; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { margin: 0; font-size: 14px; }
+        .chat-box { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 86%; padding: 10px 12px; border-radius: 10px; line-height: 1.5; font-size: 13px; white-space: pre-wrap; }
         .user { align-self: flex-end; background: #2563eb; color: white; }
         .bot { align-self: flex-start; background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; }
         .meta-tag { font-size: 11px; color: #64748b; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px dashed #cbd5e1; }
+        .tool-box { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 6px 8px; margin: 5px 0; font-size: 11px; color: #1e40af; border-radius: 4px; font-family: monospace; }
         .degrade-warn { color: #d97706; font-weight: bold; }
-        .controls { padding: 14px; border-top: 1px solid #e2e8f0; background: #fff; }
-        .input-row { display: flex; gap: 8px; margin-top: 8px; }
-        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
-        button { padding: 10px 18px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .controls { padding: 12px; border-top: 1px solid #e2e8f0; background: #fff; }
+        .input-row { display: flex; gap: 6px; margin-top: 6px; }
+        input[type="text"] { flex: 1; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; }
+        button { padding: 8px 14px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; }
         button:hover { background: #1d4ed8; }
-        .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-        .preset-btn { background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; border: none; }
-        /* 语音面板样式 */
-        .voice-body { flex: 1; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; }
-        .voice-log { flex: 1; background: #1e293b; border-radius: 8px; padding: 12px; font-size: 13px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-        .v-sys { color: #38bdf8; font-size: 12px; }
-        .v-warn { color: #fbbf24; font-size: 12px; font-weight: bold; }
+        .preset-btns { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+        .preset-btn { background: #e2e8f0; color: #334155; padding: 4px 7px; border-radius: 6px; font-size: 11px; cursor: pointer; border: none; }
+        .preset-btn.aftersales { background: #fef3c7; color: #92400e; }
+        /* 语音面板 */
+        .voice-body { flex: 1; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; }
+        .voice-log { flex: 1; background: #1e293b; border-radius: 8px; padding: 10px; font-size: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+        .v-sys { color: #38bdf8; font-size: 11px; }
+        .v-warn { color: #fbbf24; font-size: 11px; font-weight: bold; }
         .v-user { color: #a7f3d0; }
         .v-ai { color: #f8fafc; }
-        .voice-btns { display: flex; gap: 10px; }
-        .btn-call { flex: 1; background: #10b981; padding: 12px; font-size: 14px; }
+        .voice-btns { display: flex; gap: 8px; }
+        .btn-call { flex: 1; background: #10b981; padding: 10px; }
         .btn-call.active { background: #ef4444; }
-        .btn-interrupt { background: #f59e0b; color: #0f172a; padding: 12px; font-size: 14px; }
+        .btn-interrupt { background: #f59e0b; color: #0f172a; padding: 10px; }
+        /* 右侧后台面板 */
+        .admin-body { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #f8fafc; font-size: 12px; }
+        .card-title { font-weight: bold; color: #0f172a; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .bg-none { background: #e2e8f0; color: #475569; }
+        .bg-pending { background: #fef3c7; color: #b45309; }
+        .bg-refunded { background: #dcfce7; color: #15803d; }
+        .bg-rejected { background: #fee2e2; color: #b91c1c; }
     </style>
 </head>
 <body>
 
-<!-- 左侧：文本流式 RAG 对话台 -->
+<!-- 左栏：售前RAG + 售后Agent对话台 -->
 <div class="panel chat-panel">
     <div class="header">
-        <h2>💬 文本流式客服 (混合检索 + 降级 + SSE)</h2>
+        <h2>🤖 全能客服 Agent (RAG问答 + 售后Tool Calling)</h2>
     </div>
     <div class="chat-box" id="chatBox">
-        <div class="msg bot">Hello! 支持中/英/西多语种提问，已启用 Prefix Cache 前缀缓存与超时降级保护。</div>
+        <div class="msg bot">Hello! 我是跨境电商全能智能客服。支持售前参数咨询（混合RAG）以及售后查单、极速退款与大额风控审批。</div>
     </div>
     <div class="controls">
         <div class="preset-btns">
-            <button class="preset-btn" onclick="setQuery('How do I reset my SKU-WT01 headphones?')">SKU-WT01重置(英)</button>
-            <button class="preset-btn" onclick="setQuery('SKU-SW09手表支持游泳防水吗？')">SKU-SW09防水(中)</button>
-            <button class="preset-btn" onclick="setQuery('What is your return policy for damaged items?')">损坏退货政策</button>
+            <button class="preset-btn" onclick="setQuery('SKU-SW09手表支持游泳防水吗？')">售前：SKU-SW09防水</button>
+            <button class="preset-btn aftersales" onclick="setQuery('帮我查一下订单 ORD-1001，耳机用不惯我想退货退款')">售后1：ORD-1001($39.9秒退)</button>
+            <button class="preset-btn aftersales" onclick="setQuery('我要退掉订单 ORD-1002 的手表，帮我全额退款')">售后2：ORD-1002($189风控拦截)</button>
         </div>
-        <label style="font-size:12px; color:#475569;">
+        <label style="font-size:11px; color:#475569;">
             <input type="checkbox" id="slowEmbedCheck"> 模拟向量超时（验证自动降级为纯 BM25）
         </label>
         <div class="input-row">
-            <input type="text" id="queryInput" placeholder="输入买家文本消息..." onkeypress="if(event.key==='Enter') sendMsg()">
+            <input type="text" id="queryInput" placeholder="输入售前咨询或售后订单号..." onkeypress="if(event.key==='Enter') sendMsg()">
             <button onclick="sendMsg()">发送</button>
         </div>
     </div>
 </div>
 
-<!-- 右侧：WebSocket 全双工实时语音交互台 -->
+<!-- 中栏：WebSocket 全双工语音打断台 -->
 <div class="panel voice-panel">
     <div class="header" style="background:#020617;">
-        <h2>🎙️ 全双工实时语音客服 (WebSocket + 打断)</h2>
-        <span id="wsStatus" style="font-size:12px; color:#94a3b8;">未连接</span>
+        <h2>🎙️ 全双工实时语音 (WebSocket + 打断)</h2>
+        <span id="wsStatus" style="font-size:11px; color:#94a3b8;">未连接</span>
     </div>
     <div class="voice-body">
         <div class="voice-log" id="voiceLog">
-            <div class="v-sys">💡 点击下方【开启语音通话】后，可直接对着麦克风说话（支持中文/英文），或在下方输入框模拟语音转写流。</div>
-            <div class="v-sys">⚡ AI 语音播报中途，点击【立即打断】或直接开口说话，将触发毫秒级流式中断！</div>
+            <div class="v-sys">💡 开启语音通话后可直接说话，或用下方输入框模拟语音流。播报中途点【立即打断】触发毫秒级中断。</div>
         </div>
         <div>
-            <div class="input-row" style="margin-bottom:10px;">
+            <div class="input-row" style="margin-bottom:8px;">
                 <input type="text" id="simVoiceInput" placeholder="无麦克风可在此输入模拟语音..." style="background:#1e293b; color:white; border-color:#334155;" onkeypress="if(event.key==='Enter') sendSimulatedVoice()">
                 <button onclick="sendSimulatedVoice()" style="background:#3b82f6;">模拟说话</button>
             </div>
             <div class="voice-btns">
-                <button class="btn-call" id="callBtn" onclick="toggleVoiceCall()">📞 开启全双工语音通话</button>
-                <button class="btn-interrupt" onclick="triggerInterrupt()">✋ 立即打断 AI</button>
+                <button class="btn-call" id="callBtn" onclick="toggleVoiceCall()">📞 开启语音通话</button>
+                <button class="btn-interrupt" onclick="triggerInterrupt()">✋ 立即打断</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- 右栏：实时业务库与 Human-in-the-Loop 人工审批后台 -->
+<div class="panel admin-panel">
+    <div class="header" style="background:#334155;">
+        <h2>🛡️ 订单数据库与人工审批台 (HITL)</h2>
+        <button onclick="resetDemo()" style="background:#64748b; padding:4px 8px; font-size:11px;">重置演示数据</button>
+    </div>
+    <div class="admin-body">
+        <div>
+            <div style="font-weight:bold; font-size:13px; margin-bottom:8px; color:#1e293b;">🚨 待人工审核高危工单 (>$50 拦截)</div>
+            <div id="ticketList" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        <div>
+            <div style="font-weight:bold; font-size:13px; margin-bottom:8px; color:#1e293b;">📦 PostgreSQL 实时订单表状态</div>
+            <div id="orderList" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+    </div>
+</div>
+
 <script>
-    // ================= 左侧文本 SSE 逻辑 =================
+    // ================= 左侧 Agent SSE 对话逻辑 =================
     function setQuery(text) {
         document.getElementById('queryInput').value = text;
         sendMsg();
@@ -111,9 +140,11 @@
         botDiv.className = 'msg bot';
         const metaDiv = document.createElement('div');
         metaDiv.className = 'meta-tag';
-        metaDiv.textContent = '⏳ 正在检索知识库...';
+        metaDiv.textContent = '⏳ Agent 思考与路由中...';
+        const traceDiv = document.createElement('div');
         const textDiv = document.createElement('div');
         botDiv.appendChild(metaDiv);
+        botDiv.appendChild(traceDiv);
         botDiv.appendChild(textDiv);
         chatBox.appendChild(botDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -140,21 +171,163 @@
                     const data = JSON.parse(line.slice(6));
                     if (data.type === 'meta') {
                         const statusHtml = data.degraded
-                            ? `<span class="degrade-warn">⚠️ 已触发降级(${data.degrade_reason})</span>`
-                            : `✅ 混合检索正常`;
-                        metaDiv.innerHTML = `${statusHtml} | SKU: <b>${data.filtered_sku}</b> | 检索: <b>${data.rag_latency_ms}ms</b>`;
+                            ? `<span class="degrade-warn">⚠️ 已触发降级</span>`
+                            : `✅ 路由正常`;
+                        metaDiv.innerHTML = `${statusHtml} | 模式: <b>${data.filtered_sku}</b> | 检索: <b>${data.rag_latency_ms}ms</b>`;
+                    } else if (data.type === 'tool_call') {
+                        const tCard = document.createElement('div');
+                        tCard.className = 'tool-box';
+                        tCard.textContent = `🔧 调用工具: ${data.tool}(${data.args})`;
+                        traceDiv.appendChild(tCard);
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    } else if (data.type === 'tool_result') {
+                        const rCard = document.createElement('div');
+                        rCard.className = 'tool-box';
+                        rCard.style.background = '#f0fdf4';
+                        rCard.style.borderColor = '#22c55e';
+                        rCard.style.color = '#166534';
+                        rCard.textContent = `📥 数据库返回: ${JSON.stringify(data.result)}`;
+                        traceDiv.appendChild(rCard);
+                        loadDashboard(); // 刷新右侧数据库面板！
+                        chatBox.scrollTop = chatBox.scrollHeight;
                     } else if (data.type === 'token') {
                         textDiv.textContent += data.content;
                         chatBox.scrollTop = chatBox.scrollHeight;
                     } else if (data.type === 'done') {
-                        metaDiv.innerHTML += ` | 首字延迟: <b>${data.first_token_ms}ms</b>`;
+                        metaDiv.innerHTML += ` | 首字: <b>${data.first_token_ms}ms</b>`;
+                        loadDashboard();
+                    } else if (data.type === 'error') {
+                        textDiv.textContent = '❌ ' + data.message;
                     }
                 }
             }
         }
     }
 
-    // ================= 右侧 WebSocket 全双工语音逻辑 =================
+    // ================= 右侧订单数据库与人工审批台逻辑 =================
+    async function loadDashboard() {
+        const res = await fetch('/api/chat/dashboard');
+        const data = await res.json();
+
+        const ticketList = document.getElementById('ticketList');
+        if (data.tickets.length === 0) {
+            ticketList.innerHTML = '<div style="font-size:12px; color:#94a3b8;">暂无高危审批工单（尝试退款 ORD-1002 触发拦截）</div>';
+        } else {
+            ticketList.innerHTML = data.tickets.map(t => `
+                <div class="card" style="border-left: 3px solid ${t.status === 'PENDING_APPROVAL' ? '#f59e0b' : '#10b981'};">
+                    <div class="card-title">
+                        <span>工单 ${t.ticket_id} (订单 ${t.order_id})</span>
+                        <span class="badge ${t.status === 'PENDING_APPROVAL' ? 'bg-pending' : (t.status === 'APPROVED' ? 'bg-refunded' : 'bg-rejected')}">${t.status}</span>
+                    </div>
+                    <div>申请金额: <b style="color:#dc2626;">$${t.amount_usd}</b> | 原因: ${t.reason}</div>
+                    ${t.status === 'PENDING_APPROVAL' ? `
+                        <div style="margin-top:8px; display:flex; gap:8px;">
+                            <button onclick="reviewTicket('${t.ticket_id}', 'APPROVE')" style="background:#10b981; padding:4px 10px;">✅ 人工批准退款</button>
+                            <button onclick="reviewTicket('${t.ticket_id}', 'REJECT')" style="background:#ef4444; padding:4px 10px;">❌ 驳回申请</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        const orderList = document.getElementById('orderList');
+        orderList.innerHTML = data.orders.map(o => {
+            let badgeCls = 'bg-none';
+            if (o.refund_status === 'PENDING_APPROVAL') badgeCls = 'bg-pending';
+            if (o.refund_status === 'REFUNDED') badgeCls = 'bg-refunded';
+            if (o.refund_status === 'REJECTED') badgeCls = 'bg-rejected';
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <span>${o.order_id} (${o.user_name}) - $${o.amount_usd}</span>
+                        <span class="badge ${badgeCls}">${o.refund_status}</span>
+                    </div>
+                    <div style="color:#475569;">${o.product}</div>
+                    <div style="color:#64748b; margin-top:2px;">物流: ${o.shipping_status} | 签收: ${o.days}天</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function reviewTicket(ticketId, action) {
+        const res = await fetch(`/api/chat/tickets/${ticketId}/review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        await loadDashboard();
+
+        // 【HITL 审批闭环事件回调】：人工专员审批完成后，主动唤醒客服 Agent 向买家推送通知！
+        if (data.success) {
+            const actionText = action === 'APPROVE' ? '已批准同意退款' : '已驳回退款申请';
+            const sysEventPrompt = `【系统内部审批回调通知】人工售后专员刚刚处理了工单 ${ticketId}，审批结果为：【${actionText}】。请立刻以跨境电商客服的身份，用热情礼貌的语气向买家主动同步这一最新审批结果（如果是批准退款，告知款项将在1-3个工作日原路退回；如果是驳回，礼貌告知原因并建议联系人工复核）。`;
+            
+            // 在左侧对话流中以“系统回调事件”触发 AI 主动回复
+            triggerAgentCallbackNotification(sysEventPrompt, `🔔 后台专员已完成工单 ${ticketId} 审批（${actionText}），正在通知买家...`);
+        }
+    }
+
+    async function triggerAgentCallbackNotification(internalPrompt, bannerText) {
+        const chatBox = document.getElementById('chatBox');
+
+        // 添加一条系统状态分割线提示
+        const noticeDiv = document.createElement('div');
+        noticeDiv.style.cssText = 'align-self:center; font-size:11px; color:#b45309; background:#fef3c7; padding:4px 10px; border-radius:12px;';
+        noticeDiv.textContent = bannerText;
+        chatBox.appendChild(noticeDiv);
+
+        // 创建客服主动通知气泡
+        const botDiv = document.createElement('div');
+        botDiv.className = 'msg bot';
+        botDiv.style.borderColor = '#10b981';
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta-tag';
+        metaDiv.innerHTML = '✅ <b>HITL 人工审批事件回调</b> | 客服主动触达买家';
+        const textDiv = document.createElement('div');
+        botDiv.appendChild(metaDiv);
+        botDiv.appendChild(textDiv);
+        chatBox.appendChild(botDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const response = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: internalPrompt })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const msg = JSON.parse(line.slice(6));
+                    if (msg.type === 'token') {
+                        textDiv.textContent += msg.content;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                }
+            }
+        }
+    }
+
+    async function resetDemo() {
+        await fetch('/api/chat/reset-demo', { method: 'POST' });
+        loadDashboard();
+    }
+
+    // 页面加载时拉取一次数据库实时状态
+    loadDashboard();
+
+    // ================= 中栏 WebSocket 全双工语音逻辑 =================
     let ws = null;
     let recognition = null;
     let isCalling = false;
@@ -174,52 +347,33 @@
         if (ws && ws.readyState === WebSocket.OPEN) return;
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${location.host}/ws/voice`);
-
         ws.onopen = () => {
-            document.getElementById('wsStatus').textContent = '🟢 WebSocket 全双工已连接';
+            document.getElementById('wsStatus').textContent = '🟢 已连接';
             document.getElementById('wsStatus').style.color = '#10b981';
         };
-
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'subtitle_token') {
-                if (!currentAiSubtitle) {
-                    currentAiSubtitle = addVoiceLog('v-ai', '🤖 AI客服: ');
-                }
+                if (!currentAiSubtitle) currentAiSubtitle = addVoiceLog('v-ai', '🤖 AI: ');
                 currentAiSubtitle.textContent += data.token;
                 document.getElementById('voiceLog').scrollTop = document.getElementById('voiceLog').scrollHeight;
             } else if (data.type === 'tts_sentence') {
-                if (data.first_sentence_ms) {
-                    addVoiceLog('v-sys', `⚡ 首句语音推流延迟: ${data.first_sentence_ms}ms`);
-                }
-                speakSentence(data.text, data.lang);
+                const utter = new SpeechSynthesisUtterance(data.text);
+                utter.lang = data.lang || 'zh-CN';
+                window.speechSynthesis.speak(utter);
             } else if (data.type === 'interrupted') {
-                window.speechSynthesis.cancel(); // 瞬间掐断前端喇叭播报
+                window.speechSynthesis.cancel();
                 currentAiSubtitle = null;
-                addVoiceLog('v-warn', `🛑 [毫秒级打断成功] ${data.reason} | 后端任务取消耗时: ${data.cancel_latency_ms}ms`);
+                addVoiceLog('v-warn', `🛑 [打断成功] 后端取消耗时: ${data.cancel_latency_ms}ms`);
             } else if (data.type === 'turn_done') {
                 currentAiSubtitle = null;
             }
         };
-
-        ws.onclose = () => {
-            document.getElementById('wsStatus').textContent = '🔴 连接已断开';
-            document.getElementById('wsStatus').style.color = '#ef4444';
-        };
-    }
-
-    function speakSentence(text, lang) {
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = lang || 'zh-CN';
-        utter.rate = 1.05;
-        window.speechSynthesis.speak(utter);
     }
 
     function triggerInterrupt() {
-        window.speechSynthesis.cancel(); // 立刻静音当前TTS队列
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'interrupt' }));
-        }
+        window.speechSynthesis.cancel();
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'interrupt' }));
     }
 
     function sendSimulatedVoice() {
@@ -230,11 +384,8 @@
         input.value = '';
         window.speechSynthesis.cancel();
         currentAiSubtitle = null;
-        addVoiceLog('v-user', `🗣️ 买家(模拟语音): ${text}`);
-
-        setTimeout(() => {
-            ws.send(JSON.stringify({ type: 'user_speech', text: text }));
-        }, 100);
+        addVoiceLog('v-user', `🗣️ 买家: ${text}`);
+        setTimeout(() => ws.send(JSON.stringify({ type: 'user_speech', text })), 100);
     }
 
     function toggleVoiceCall() {
@@ -243,55 +394,37 @@
             connectWS();
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                addVoiceLog('v-warn', '⚠️ 当前浏览器不支持麦克风直接识别，请使用 Chrome/Edge 或使用上方【模拟说话】输入框。');
+                addVoiceLog('v-warn', '⚠️ 请使用 Chrome/Edge 浏览器或直接用上方模拟说话框。');
                 return;
             }
             recognition = new SpeechRecognition();
             recognition.continuous = true;
-            recognition.interimResults = true; // 开启中间结果检测，实现开口瞬间触发打断！
+            recognition.interimResults = true;
             recognition.lang = 'zh-CN';
-
-            recognition.onspeechstart = () => {
-                // 检测到用户麦克风开始发声 -> 瞬间打断正在说话的 AI！
-                if (window.speechSynthesis.speaking) {
-                    triggerInterrupt();
-                }
-            };
-
-            recognition.onresult = (event) => {
-                const last = event.results[event.results.length - 1];
+            recognition.onspeechstart = () => { if (window.speechSynthesis.speaking) triggerInterrupt(); };
+            recognition.onresult = (e) => {
+                const last = e.results[e.results.length - 1];
                 if (last.isFinal) {
-                    const transcript = last[0].transcript.trim();
-                    if (transcript) {
+                    const t = last[0].transcript.trim();
+                    if (t) {
                         currentAiSubtitle = null;
-                        addVoiceLog('v-user', `🗣️ 买家: ${transcript}`);
-                        ws.send(JSON.stringify({ type: 'user_speech', text: transcript }));
+                        addVoiceLog('v-user', `🗣️ 买家: ${t}`);
+                        ws.send(JSON.stringify({ type: 'user_speech', text: t }));
                     }
                 }
             };
-
-            recognition.onerror = (e) => {
-                if (e.error !== 'no-speech') {
-                    addVoiceLog('v-warn', `麦克风提示: ${e.error}（可直接用上方模拟语音框测试）`);
-                }
-            };
-
-            recognition.onend = () => {
-                if (isCalling) recognition.start(); // 保持全双工持续监听
-            };
-
+            recognition.onend = () => { if (isCalling) recognition.start(); };
             recognition.start();
             isCalling = true;
-            btn.textContent = '📴 挂断语音通话';
+            btn.textContent = '📴 挂断通话';
             btn.classList.add('active');
-            addVoiceLog('v-sys', '🎙️ 全双工通道已开启！请对着麦克风说话（支持随时开口打断 AI）...');
+            addVoiceLog('v-sys', '🎙️ 全双工语音已开启...');
         } else {
             isCalling = false;
             if (recognition) recognition.stop();
             window.speechSynthesis.cancel();
-            btn.textContent = '📞 开启全双工语音通话';
+            btn.textContent = '📞 开启语音通话';
             btn.classList.remove('active');
-            addVoiceLog('v-sys', '通话已结束。');
         }
     }
 </script>
