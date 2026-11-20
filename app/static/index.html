@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>跨境电商多语种智能客服中枢 (文本 + 全双工语音)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; gap: 20px; }
+        .panel { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; height: 86vh; }
+        .chat-panel { width: 580px; }
+        .voice-panel { width: 420px; background: #0f172a; color: #f8fafc; }
+        .header { background: #1e293b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { margin: 0; font-size: 16px; }
+        .chat-box { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 82%; padding: 10px 14px; border-radius: 10px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; }
+        .user { align-self: flex-end; background: #2563eb; color: white; }
+        .bot { align-self: flex-start; background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; }
+        .meta-tag { font-size: 11px; color: #64748b; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px dashed #cbd5e1; }
+        .degrade-warn { color: #d97706; font-weight: bold; }
+        .controls { padding: 14px; border-top: 1px solid #e2e8f0; background: #fff; }
+        .input-row { display: flex; gap: 8px; margin-top: 8px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+        button { padding: 10px 18px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1d4ed8; }
+        .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .preset-btn { background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; border: none; }
+        /* 语音面板样式 */
+        .voice-body { flex: 1; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; }
+        .voice-log { flex: 1; background: #1e293b; border-radius: 8px; padding: 12px; font-size: 13px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .v-sys { color: #38bdf8; font-size: 12px; }
+        .v-warn { color: #fbbf24; font-size: 12px; font-weight: bold; }
+        .v-user { color: #a7f3d0; }
+        .v-ai { color: #f8fafc; }
+        .voice-btns { display: flex; gap: 10px; }
+        .btn-call { flex: 1; background: #10b981; padding: 12px; font-size: 14px; }
+        .btn-call.active { background: #ef4444; }
+        .btn-interrupt { background: #f59e0b; color: #0f172a; padding: 12px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<!-- 左侧：文本流式 RAG 对话台 -->
+<div class="panel chat-panel">
+    <div class="header">
+        <h2>💬 文本流式客服 (混合检索 + 降级 + SSE)</h2>
+    </div>
+    <div class="chat-box" id="chatBox">
+        <div class="msg bot">Hello! 支持中/英/西多语种提问，已启用 Prefix Cache 前缀缓存与超时降级保护。</div>
+    </div>
+    <div class="controls">
+        <div class="preset-btns">
+            <button class="preset-btn" onclick="setQuery('How do I reset my SKU-WT01 headphones?')">SKU-WT01重置(英)</button>
+            <button class="preset-btn" onclick="setQuery('SKU-SW09手表支持游泳防水吗？')">SKU-SW09防水(中)</button>
+            <button class="preset-btn" onclick="setQuery('What is your return policy for damaged items?')">损坏退货政策</button>
+        </div>
+        <label style="font-size:12px; color:#475569;">
+            <input type="checkbox" id="slowEmbedCheck"> 模拟向量超时（验证自动降级为纯 BM25）
+        </label>
+        <div class="input-row">
+            <input type="text" id="queryInput" placeholder="输入买家文本消息..." onkeypress="if(event.key==='Enter') sendMsg()">
+            <button onclick="sendMsg()">发送</button>
+        </div>
+    </div>
+</div>
+
+<!-- 右侧：WebSocket 全双工实时语音交互台 -->
+<div class="panel voice-panel">
+    <div class="header" style="background:#020617;">
+        <h2>🎙️ 全双工实时语音客服 (WebSocket + 打断)</h2>
+        <span id="wsStatus" style="font-size:12px; color:#94a3b8;">未连接</span>
+    </div>
+    <div class="voice-body">
+        <div class="voice-log" id="voiceLog">
+            <div class="v-sys">💡 点击下方【开启语音通话】后，可直接对着麦克风说话（支持中文/英文），或在下方输入框模拟语音转写流。</div>
+            <div class="v-sys">⚡ AI 语音播报中途，点击【立即打断】或直接开口说话，将触发毫秒级流式中断！</div>
+        </div>
+        <div>
+            <div class="input-row" style="margin-bottom:10px;">
+                <input type="text" id="simVoiceInput" placeholder="无麦克风可在此输入模拟语音..." style="background:#1e293b; color:white; border-color:#334155;" onkeypress="if(event.key==='Enter') sendSimulatedVoice()">
+                <button onclick="sendSimulatedVoice()" style="background:#3b82f6;">模拟说话</button>
+            </div>
+            <div class="voice-btns">
+                <button class="btn-call" id="callBtn" onclick="toggleVoiceCall()">📞 开启全双工语音通话</button>
+                <button class="btn-interrupt" onclick="triggerInterrupt()">✋ 立即打断 AI</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================= 左侧文本 SSE 逻辑 =================
+    function setQuery(text) {
+        document.getElementById('queryInput').value = text;
+        sendMsg();
+    }
+
+    async function sendMsg() {
+        const input = document.getElementById('queryInput');
+        const query = input.value.trim();
+        if (!query) return;
+
+        const chatBox = document.getElementById('chatBox');
+        const simulateSlow = document.getElementById('slowEmbedCheck').checked;
+
+        const userDiv = document.createElement('div');
+        userDiv.className = 'msg user';
+        userDiv.textContent = query;
+        chatBox.appendChild(userDiv);
+        input.value = '';
+
+        const botDiv = document.createElement('div');
+        botDiv.className = 'msg bot';
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta-tag';
+        metaDiv.textContent = '⏳ 正在检索知识库...';
+        const textDiv = document.createElement('div');
+        botDiv.appendChild(metaDiv);
+        botDiv.appendChild(textDiv);
+        chatBox.appendChild(botDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const response = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query, simulate_slow_embed: simulateSlow })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.type === 'meta') {
+                        const statusHtml = data.degraded
+                            ? `<span class="degrade-warn">⚠️ 已触发降级(${data.degrade_reason})</span>`
+                            : `✅ 混合检索正常`;
+                        metaDiv.innerHTML = `${statusHtml} | SKU: <b>${data.filtered_sku}</b> | 检索: <b>${data.rag_latency_ms}ms</b>`;
+                    } else if (data.type === 'token') {
+                        textDiv.textContent += data.content;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    } else if (data.type === 'done') {
+                        metaDiv.innerHTML += ` | 首字延迟: <b>${data.first_token_ms}ms</b>`;
+                    }
+                }
+            }
+        }
+    }
+
+    // ================= 右侧 WebSocket 全双工语音逻辑 =================
+    let ws = null;
+    let recognition = null;
+    let isCalling = false;
+    let currentAiSubtitle = null;
+
+    function addVoiceLog(cls, text) {
+        const log = document.getElementById('voiceLog');
+        const div = document.createElement('div');
+        div.className = cls;
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+        return div;
+    }
+
+    function connectWS() {
+        if (ws && ws.readyState === WebSocket.OPEN) return;
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}/ws/voice`);
+
+        ws.onopen = () => {
+            document.getElementById('wsStatus').textContent = '🟢 WebSocket 全双工已连接';
+            document.getElementById('wsStatus').style.color = '#10b981';
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'subtitle_token') {
+                if (!currentAiSubtitle) {
+                    currentAiSubtitle = addVoiceLog('v-ai', '🤖 AI客服: ');
+                }
+                currentAiSubtitle.textContent += data.token;
+                document.getElementById('voiceLog').scrollTop = document.getElementById('voiceLog').scrollHeight;
+            } else if (data.type === 'tts_sentence') {
+                if (data.first_sentence_ms) {
+                    addVoiceLog('v-sys', `⚡ 首句语音推流延迟: ${data.first_sentence_ms}ms`);
+                }
+                speakSentence(data.text, data.lang);
+            } else if (data.type === 'interrupted') {
+                window.speechSynthesis.cancel(); // 瞬间掐断前端喇叭播报
+                currentAiSubtitle = null;
+                addVoiceLog('v-warn', `🛑 [毫秒级打断成功] ${data.reason} | 后端任务取消耗时: ${data.cancel_latency_ms}ms`);
+            } else if (data.type === 'turn_done') {
+                currentAiSubtitle = null;
+            }
+        };
+
+        ws.onclose = () => {
+            document.getElementById('wsStatus').textContent = '🔴 连接已断开';
+            document.getElementById('wsStatus').style.color = '#ef4444';
+        };
+    }
+
+    function speakSentence(text, lang) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = lang || 'zh-CN';
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+    }
+
+    function triggerInterrupt() {
+        window.speechSynthesis.cancel(); // 立刻静音当前TTS队列
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'interrupt' }));
+        }
+    }
+
+    function sendSimulatedVoice() {
+        connectWS();
+        const input = document.getElementById('simVoiceInput');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        window.speechSynthesis.cancel();
+        currentAiSubtitle = null;
+        addVoiceLog('v-user', `🗣️ 买家(模拟语音): ${text}`);
+
+        setTimeout(() => {
+            ws.send(JSON.stringify({ type: 'user_speech', text: text }));
+        }, 100);
+    }
+
+    function toggleVoiceCall() {
+        const btn = document.getElementById('callBtn');
+        if (!isCalling) {
+            connectWS();
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                addVoiceLog('v-warn', '⚠️ 当前浏览器不支持麦克风直接识别，请使用 Chrome/Edge 或使用上方【模拟说话】输入框。');
+                return;
+            }
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true; // 开启中间结果检测，实现开口瞬间触发打断！
+            recognition.lang = 'zh-CN';
+
+            recognition.onspeechstart = () => {
+                // 检测到用户麦克风开始发声 -> 瞬间打断正在说话的 AI！
+                if (window.speechSynthesis.speaking) {
+                    triggerInterrupt();
+                }
+            };
+
+            recognition.onresult = (event) => {
+                const last = event.results[event.results.length - 1];
+                if (last.isFinal) {
+                    const transcript = last[0].transcript.trim();
+                    if (transcript) {
+                        currentAiSubtitle = null;
+                        addVoiceLog('v-user', `🗣️ 买家: ${transcript}`);
+                        ws.send(JSON.stringify({ type: 'user_speech', text: transcript }));
+                    }
+                }
+            };
+
+            recognition.onerror = (e) => {
+                if (e.error !== 'no-speech') {
+                    addVoiceLog('v-warn', `麦克风提示: ${e.error}（可直接用上方模拟语音框测试）`);
+                }
+            };
+
+            recognition.onend = () => {
+                if (isCalling) recognition.start(); // 保持全双工持续监听
+            };
+
+            recognition.start();
+            isCalling = true;
+            btn.textContent = '📴 挂断语音通话';
+            btn.classList.add('active');
+            addVoiceLog('v-sys', '🎙️ 全双工通道已开启！请对着麦克风说话（支持随时开口打断 AI）...');
+        } else {
+            isCalling = false;
+            if (recognition) recognition.stop();
+            window.speechSynthesis.cancel();
+            btn.textContent = '📞 开启全双工语音通话';
+            btn.classList.remove('active');
+            addVoiceLog('v-sys', '通话已结束。');
+        }
+    }
+</script>
+</body>
+</html>
